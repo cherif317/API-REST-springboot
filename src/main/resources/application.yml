@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: springSecurity
+server:
+  port: 8080
+
+  datasource:
+    url: jdbc:h2:mem:securitydb
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+
+app:
+  jwt:
+    secret: rX7secwiXRhZU4TTo3p4/rAEaS8499kGDGYTOHbItR/PtW7hCzhYnT6GQHRbgI+PMbJ8Xu++c/4S28DaX2r6sA==
+    access-token-expiration: 900000
+    refresh-token-expiration: 604800000
