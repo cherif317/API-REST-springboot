@@ -50,6 +50,7 @@ public class Utilisateur implements UserDetails {
     @Size(min = 8)
     private String motDePasse;
 
+    @Column(name = "photo_profil")
     private String photoProfil;
 
     @Default

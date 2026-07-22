@@ -11,4 +11,6 @@ public interface EtudiantRepository extends JpaRepository<Etudiant, Long> {
 
     boolean existsByMatricule(String matricule);
 
+    boolean existsByMatriculeAndIdNot(String matricule, Long id);
+
 }

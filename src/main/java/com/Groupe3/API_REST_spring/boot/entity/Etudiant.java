@@ -3,10 +3,7 @@ package com.Groupe3.API_REST_spring.boot.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -20,16 +17,26 @@ import java.util.List;
 @AllArgsConstructor
 public class Etudiant extends Utilisateur {
 
+
     @NotBlank
     @Column(unique = true)
     private String matricule;
 
+
     @Past
     private LocalDate dateNaissance;
 
+
     private String adresse;
 
+
+    /**
+     * Chemin de la photo
+     * Exemple :
+     * uploads/photos/diallo.jpg
+     */
     private String photo;
+
 
     @OneToMany(
             mappedBy = "etudiant",

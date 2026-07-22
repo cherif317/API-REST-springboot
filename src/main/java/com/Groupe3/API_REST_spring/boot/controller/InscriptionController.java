@@ -56,6 +56,16 @@ public class InscriptionController {
         return ResponseEntity.ok(created);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Modifier une inscription", description = "Modifie l'étudiant et/ou le cours d'une inscription existante")
+    public ResponseEntity<InscriptionDTO> update(@PathVariable Long id,
+                                                 @RequestParam Long etudiantId,
+                                                 @RequestParam Long coursId) {
+        InscriptionDTO updated = inscriptionService.update(id, etudiantId, coursId);
+        return ResponseEntity.ok(updated);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Supprimer une inscription", description = "Supprime une inscription de la base de données")

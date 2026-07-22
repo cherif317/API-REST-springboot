@@ -10,5 +10,6 @@ public interface InscriptionService {
     List<InscriptionDTO> findByEtudiant(Long etudiantId);
     List<InscriptionDTO> findByCours(Long coursId);
     InscriptionDTO create(Long etudiantId, Long coursId);
+    InscriptionDTO update(Long id, Long etudiantId, Long coursId);
     void delete(Long id);
 }

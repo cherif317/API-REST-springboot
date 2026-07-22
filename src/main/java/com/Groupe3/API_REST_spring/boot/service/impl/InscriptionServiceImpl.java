@@ -59,7 +59,7 @@ public class InscriptionServiceImpl implements InscriptionService {
     public InscriptionDTO create(Long etudiantId, Long coursId) {
         Etudiant etudiant = etudiantRepository.findById(etudiantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Etudiant non trouvé avec l'ID: " + etudiantId));
-        
+
         Cours cours = coursRepository.findById(coursId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé avec l'ID: " + coursId));
 
@@ -74,6 +74,32 @@ public class InscriptionServiceImpl implements InscriptionService {
 
         Inscription savedInscription = inscriptionRepository.save(inscription);
         return inscriptionMapper.toDTO(savedInscription);
+    }
+
+    @Override
+    public InscriptionDTO update(Long id, Long etudiantId, Long coursId) {
+        Inscription inscription = inscriptionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscription non trouvée avec l'ID: " + id));
+
+        Etudiant etudiant = etudiantRepository.findById(etudiantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Etudiant non trouvé avec l'ID: " + etudiantId));
+
+        Cours cours = coursRepository.findById(coursId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cours non trouvé avec l'ID: " + coursId));
+
+        boolean dejaInscritAilleurs = inscriptionRepository.existsByEtudiantIdAndCoursId(etudiantId, coursId)
+                && !(inscription.getEtudiant().getId().equals(etudiantId)
+                && inscription.getCours().getId().equals(coursId));
+
+        if (dejaInscritAilleurs) {
+            throw new RuntimeException("L'étudiant est déjà inscrit à ce cours");
+        }
+
+        inscription.setEtudiant(etudiant);
+        inscription.setCours(cours);
+
+        Inscription updatedInscription = inscriptionRepository.save(inscription);
+        return inscriptionMapper.toDTO(updatedInscription);
     }
 
     @Override

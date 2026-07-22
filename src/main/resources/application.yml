@@ -1,9 +1,6 @@
 spring:
   application:
     name: springSecurity
-server:
-  port: 8080
-
   datasource:
     url: jdbc:h2:mem:securitydb
     username: sa
@@ -15,6 +12,10 @@ server:
     hibernate:
       ddl-auto: create
     show-sql: true
+    defer-datasource-initialization: true
+
+server:
+  port: 8081
 
 app:
   jwt:

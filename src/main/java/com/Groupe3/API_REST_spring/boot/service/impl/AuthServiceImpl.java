@@ -13,6 +13,7 @@ import com.Groupe3.API_REST_spring.boot.repository.RoleRepository;
 import com.Groupe3.API_REST_spring.boot.repository.UtilisateurRepository;
 import com.Groupe3.API_REST_spring.boot.repository.RefreshTokenRepository;
 import com.Groupe3.API_REST_spring.boot.service.AuthService;
+import com.Groupe3.API_REST_spring.boot.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,15 +41,20 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse register(RegisterRequest request) {
         if (utilisateurRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email déjà utilisé");
+            throw new BadRequestException("Email déjà utilisé");
         }
 
         Set<Role> roles = new HashSet<>();
-        if (request.getRole() != null) {
-            RoleName roleName = RoleName.valueOf(request.getRole().toUpperCase());
-            Role role = roleRepository.findByNom(roleName)
-                    .orElseThrow(() -> new RuntimeException("Rôle non trouvé"));
-            roles.add(role);
+        String roleStr = request.getRole();
+        if (roleStr != null && !roleStr.trim().isEmpty()) {
+            try {
+                RoleName roleName = RoleName.valueOf(roleStr.trim().toUpperCase());
+                Role role = roleRepository.findByNom(roleName)
+                        .orElseGet(() -> roleRepository.save(Role.builder().nom(roleName).build()));
+                roles.add(role);
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Rôle invalide. Les rôles autorisés sont : ADMIN, ENSEIGNANT, ETUDIANT");
+            }
         } else {
             Role defaultRole = roleRepository.findByNom(RoleName.ETUDIANT)
                     .orElseGet(() -> roleRepository.save(Role.builder().nom(RoleName.ETUDIANT).build()));
@@ -74,7 +80,7 @@ public class AuthServiceImpl implements AuthService {
                 .token(token)
                 .refreshToken(refreshToken.getToken())
                 .email(utilisateur.getEmail())
-                .role(utilisateur.getRoles().iterator().next().getNom().name())
+                .role(utilisateur.getRoles().stream().findFirst().map(r -> r.getNom().name()).orElse(null))
                 .build();
     }
 
@@ -85,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
         );
 
         Utilisateur utilisateur = utilisateurRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new BadRequestException("Utilisateur non trouvé"));
 
         String token = jwtService.generateToken(utilisateur);
         RefreshToken refreshToken = createRefreshToken(utilisateur);
@@ -94,18 +100,18 @@ public class AuthServiceImpl implements AuthService {
                 .token(token)
                 .refreshToken(refreshToken.getToken())
                 .email(utilisateur.getEmail())
-                .role(utilisateur.getRoles().iterator().next().getNom().name())
+                .role(utilisateur.getRoles().stream().findFirst().map(r -> r.getNom().name()).orElse(null))
                 .build();
     }
 
     @Override
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.refreshToken())
-                .orElseThrow(() -> new RuntimeException("Refresh token non trouvé ou invalide"));
+                .orElseThrow(() -> new BadRequestException("Refresh token non trouvé ou invalide"));
 
         if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(refreshToken);
-            throw new RuntimeException("Refresh token expiré. Veuillez vous reconnecter.");
+            throw new BadRequestException("Refresh token expiré. Veuillez vous reconnecter.");
         }
 
         Utilisateur user = refreshToken.getUser();
@@ -116,15 +122,17 @@ public class AuthServiceImpl implements AuthService {
                 .token(newToken)
                 .refreshToken(newRefreshToken.getToken())
                 .email(user.getEmail())
-                .role(user.getRoles().iterator().next().getNom().name())
+                .role(user.getRoles().stream().findFirst().map(r -> r.getNom().name()).orElse(null))
                 .build();
     }
 
     private RefreshToken createRefreshToken(Utilisateur user) {
-        refreshTokenRepository.deleteByUser(user);
-
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
+        RefreshToken refreshToken = refreshTokenRepository.findByUser(user)
+                .orElseGet(() -> {
+                    RefreshToken rt = new RefreshToken();
+                    rt.setUser(user);
+                    return rt;
+                });
         refreshToken.setToken(UUID.randomUUID().toString());
         refreshToken.setExpiryDate(Instant.now().plusMillis(604800000)); // 7 jours d'expiration
         return refreshTokenRepository.save(refreshToken);

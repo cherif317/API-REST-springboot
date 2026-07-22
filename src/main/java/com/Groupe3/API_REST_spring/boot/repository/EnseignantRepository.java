@@ -6,5 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
+
     Page<Enseignant> findByNomContainingIgnoreCase(String nom, Pageable pageable);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
+
 }

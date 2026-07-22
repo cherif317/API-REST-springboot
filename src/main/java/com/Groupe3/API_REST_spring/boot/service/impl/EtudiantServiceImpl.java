@@ -6,10 +6,12 @@ import com.Groupe3.API_REST_spring.boot.dto.etudiant.EtudiantUpdateDTO;
 import com.Groupe3.API_REST_spring.boot.entity.Etudiant;
 import com.Groupe3.API_REST_spring.boot.entity.Role;
 import com.Groupe3.API_REST_spring.boot.enums.RoleName;
+import com.Groupe3.API_REST_spring.boot.exception.BadRequestException;
 import com.Groupe3.API_REST_spring.boot.exception.ResourceNotFoundException;
 import com.Groupe3.API_REST_spring.boot.mapper.EtudiantMapper;
 import com.Groupe3.API_REST_spring.boot.repository.EtudiantRepository;
 import com.Groupe3.API_REST_spring.boot.repository.RoleRepository;
+import com.Groupe3.API_REST_spring.boot.repository.UtilisateurRepository;
 import com.Groupe3.API_REST_spring.boot.service.EtudiantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +29,7 @@ import java.util.Set;
 public class EtudiantServiceImpl implements EtudiantService {
 
     private final EtudiantRepository etudiantRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final RoleRepository roleRepository;
     private final EtudiantMapper etudiantMapper;
     private final PasswordEncoder passwordEncoder;
@@ -51,7 +54,10 @@ public class EtudiantServiceImpl implements EtudiantService {
     @Override
     public EtudiantDTO create(EtudiantCreateDTO dto) {
         if (etudiantRepository.existsByMatricule(dto.getMatricule())) {
-            throw new RuntimeException("Matricule déjà utilisé");
+            throw new BadRequestException("Matricule déjà utilisé : " + dto.getMatricule());
+        }
+        if (utilisateurRepository.existsByEmail(dto.getEmail())) {
+            throw new BadRequestException("Email déjà utilisé : " + dto.getEmail());
         }
 
         Set<Role> roles = new HashSet<>();
@@ -63,8 +69,7 @@ public class EtudiantServiceImpl implements EtudiantService {
         etudiant.setRoles(roles);
         etudiant.setMotDePasse(passwordEncoder.encode(dto.getMotDePasse()));
 
-        Etudiant savedEtudiant = etudiantRepository.save(etudiant);
-        return etudiantMapper.toDTO(savedEtudiant);
+        return etudiantMapper.toDTO(etudiantRepository.save(etudiant));
     }
 
     @Override
@@ -72,17 +77,21 @@ public class EtudiantServiceImpl implements EtudiantService {
         Etudiant etudiant = etudiantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Etudiant non trouvé avec l'ID: " + id));
 
-        etudiantMapper.updateEntityFromDTO(dto, etudiant);
-        
-        if (dto.getMatricule() != null && !dto.getMatricule().equals(etudiant.getMatricule())) {
-            if (etudiantRepository.existsByMatricule(dto.getMatricule())) {
-                throw new RuntimeException("Matricule déjà utilisé");
+        // Vérifications AVANT le mapper pour éviter les violations de contrainte unique
+        if (dto.getEmail() != null && !dto.getEmail().equals(etudiant.getEmail())) {
+            if (utilisateurRepository.existsByEmail(dto.getEmail())) {
+                throw new BadRequestException("Email déjà utilisé par un autre utilisateur");
             }
-            etudiant.setMatricule(dto.getMatricule());
+        }
+        if (dto.getMatricule() != null && !dto.getMatricule().equals(etudiant.getMatricule())) {
+            if (etudiantRepository.existsByMatriculeAndIdNot(dto.getMatricule(), id)) {
+                throw new BadRequestException("Matricule déjà utilisé par un autre étudiant");
+            }
         }
 
-        Etudiant updatedEtudiant = etudiantRepository.save(etudiant);
-        return etudiantMapper.toDTO(updatedEtudiant);
+        etudiantMapper.updateEntityFromDTO(dto, etudiant);
+
+        return etudiantMapper.toDTO(etudiantRepository.save(etudiant));
     }
 
     @Override

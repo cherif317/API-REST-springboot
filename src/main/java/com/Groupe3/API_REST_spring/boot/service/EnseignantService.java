@@ -4,6 +4,7 @@ import com.Groupe3.API_REST_spring.boot.dto.enseignant.EnseignantCreateDTO;
 import com.Groupe3.API_REST_spring.boot.dto.enseignant.EnseignantDTO;
 import com.Groupe3.API_REST_spring.boot.dto.enseignant.EnseignantUpdateDTO;
 import com.Groupe3.API_REST_spring.boot.entity.Enseignant;
+import com.Groupe3.API_REST_spring.boot.exception.BadRequestException;
 import com.Groupe3.API_REST_spring.boot.exception.ResourceNotFoundException;
 import com.Groupe3.API_REST_spring.boot.repository.EnseignantRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,9 @@ public class EnseignantService {
     }
 
     public EnseignantDTO create(EnseignantCreateDTO dto) {
+        if (enseignantRepository.existsByEmail(dto.getEmail())) {
+            throw new BadRequestException("Email déjà utilisé par un autre enseignant");
+        }
         Enseignant enseignant = Enseignant.builder()
                 .nom(dto.getNom())
                 .prenom(dto.getPrenom())
@@ -41,11 +45,19 @@ public class EnseignantService {
     public EnseignantDTO update(Long id, EnseignantUpdateDTO dto) {
         Enseignant enseignant = enseignantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Enseignant non trouvé avec l'id : " + id));
-        enseignant.setNom(dto.getNom());
-        enseignant.setPrenom(dto.getPrenom());
-        enseignant.setEmail(dto.getEmail());
-        enseignant.setSpecialite(dto.getSpecialite());
-        enseignant.setTelephone(dto.getTelephone());
+
+        if (dto.getEmail() != null && !dto.getEmail().equals(enseignant.getEmail())) {
+            if (enseignantRepository.existsByEmailAndIdNot(dto.getEmail(), id)) {
+                throw new BadRequestException("Email déjà utilisé par un autre enseignant");
+            }
+        }
+
+        if (dto.getNom() != null) enseignant.setNom(dto.getNom());
+        if (dto.getPrenom() != null) enseignant.setPrenom(dto.getPrenom());
+        if (dto.getEmail() != null) enseignant.setEmail(dto.getEmail());
+        if (dto.getSpecialite() != null) enseignant.setSpecialite(dto.getSpecialite());
+        if (dto.getTelephone() != null) enseignant.setTelephone(dto.getTelephone());
+
         return toDTO(enseignantRepository.save(enseignant));
     }
 
